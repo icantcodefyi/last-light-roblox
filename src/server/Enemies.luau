@@ -15,12 +15,14 @@ local living: { [Model]: { kind: string, health: number, maxHealth: number, stat
 local folder: Folder
 local onDeath: (kind: string, reward: number, killer: Player?) -> () = function() end
 local onTowerHit: (damage: number) -> () = function() end
+local onSpawn: (kind: string) -> () = function() end
+local onBossHealth: (health: number, maxHealth: number) -> () = function() end
 
 local SKIN = {
 	Crawler = { Body = Color3.fromRGB(38, 92, 96), Eye = Color3.fromRGB(130, 255, 210) },
 	Brute = { Body = Color3.fromRGB(70, 62, 80), Eye = Color3.fromRGB(255, 120, 70) },
 	Wisp = { Body = Color3.fromRGB(150, 220, 255), Eye = Color3.fromRGB(255, 255, 255) },
-	Leviathan = { Body = Color3.fromRGB(30, 40, 70), Eye = Color3.fromRGB(255, 70, 90) },
+	Leviathan = { Body = Color3.fromRGB(96, 60, 150), Eye = Color3.fromRGB(255, 70, 90) },
 }
 
 local function addPart(model: Model, name: string, shape: Enum.PartType, size: Vector3, offset: CFrame, color: Color3, material: Enum.Material): Part
@@ -84,16 +86,18 @@ local function addHealthBar(model: Model, kind: string)
 	billboard.Parent = model.PrimaryPart
 end
 
-function Enemies.init(enemyFolder: Folder, handlers: { onDeath: (string, number, Player?) -> (), onTowerHit: (number) -> () })
+function Enemies.init(enemyFolder: Folder, handlers: { [string]: any })
 	folder = enemyFolder
 	onDeath = handlers.onDeath
 	onTowerHit = handlers.onTowerHit
+	onSpawn = handlers.onSpawn
+	onBossHealth = handlers.onBossHealth
 	RunService.Heartbeat:Connect(Enemies.step)
 end
 
 function Enemies.spawn(kind: string, at: Vector3)
 	local stats = Config.Enemies[kind]
-	local scale = ({ Crawler = 0.9, Brute = 1.7, Wisp = 0.7, Leviathan = 3.6 })[kind]
+	local scale = ({ Crawler = 1.25, Brute = 2.1, Wisp = 1, Leviathan = 4.2 })[kind]
 	local model = buildBody(kind, scale)
 	model:PivotTo(CFrame.new(at.X, -3, at.Z))
 	addHealthBar(model, kind)
@@ -101,6 +105,10 @@ function Enemies.spawn(kind: string, at: Vector3)
 	model.Parent = folder
 	living[model] = { kind = kind, health = stats.Health, maxHealth = stats.Health, stats = stats, nextAttack = 0 }
 	feedback:FireAllClients("Rise", model:GetPivot().Position, kind)
+	onSpawn(kind)
+	if stats.Boss then
+		onBossHealth(stats.Health, stats.Health)
+	end
 	return model
 end
 
@@ -176,6 +184,9 @@ function Enemies.damage(model: Model, amount: number, attacker: Player?): boolea
 		bar.Frame.Fill.Size = UDim2.fromScale(math.max(enemy.health, 0) / enemy.maxHealth, 1)
 	end
 	feedback:FireAllClients("Hit", model:GetPivot().Position, math.floor(amount))
+	if enemy.stats.Boss then
+		onBossHealth(math.max(enemy.health, 0), enemy.maxHealth)
+	end
 	if enemy.health <= 0 then
 		living[model] = nil
 		feedback:FireAllClients("Banish", model:GetPivot().Position, enemy.kind, enemy.stats.Reward)

@@ -9,7 +9,12 @@ local Combat = require(script.Combat)
 local Waves = require(script.Waves)
 
 local drowned = World.build()
-Enemies.init(drowned, { onDeath = Waves.onBanished, onTowerHit = Waves.onTowerHit })
+Enemies.init(drowned, {
+	onDeath = Waves.onBanished,
+	onTowerHit = Waves.onTowerHit,
+	onSpawn = Waves.onSpawned,
+	onBossHealth = Waves.onBossHealth,
+})
 Waves.init()
 
 Net.remote("RequestStart").OnServerEvent:Connect(Waves.requestStart)

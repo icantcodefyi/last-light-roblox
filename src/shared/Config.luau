@@ -38,10 +38,10 @@ Config.Player = {
 
 -- The Drowned: four kinds, each with its own body, speed and target.
 Config.Enemies = {
-	Crawler = { Health = 60, Speed = 6, Damage = 6, Reward = 5, Target = "Tower", Height = 1.6 },
-	Brute = { Health = 280, Speed = 3.5, Damage = 16, Reward = 15, Target = "Tower", Height = 2.8 },
-	Wisp = { Health = 40, Speed = 8, Damage = 8, Reward = 8, Target = "Player", Height = 4.5 },
-	Leviathan = { Health = 2600, Speed = 2.4, Damage = 26, Reward = 120, Target = "Tower", Height = 5.6, Boss = true },
+	Crawler = { Health = 60, Speed = 6, Damage = 6, Reward = 5, Target = "Tower", Height = 2, Title = "Crawler", Blurb = "swarms the tower" },
+	Brute = { Health = 280, Speed = 3.5, Damage = 16, Reward = 15, Target = "Tower", Height = 3.4, Title = "Barnacle Brute", Blurb = "slow, armoured" },
+	Wisp = { Health = 40, Speed = 8, Damage = 8, Reward = 8, Target = "Player", Height = 5, Title = "Will-o'-Wisp", Blurb = "hunts the keeper" },
+	Leviathan = { Health = 2600, Speed = 2.4, Damage = 26, Reward = 120, Target = "Tower", Height = 6.5, Boss = true, Title = "The Leviathan", Blurb = "night five boss" },
 }
 
 -- Five nights. Each entry is how many of each kind rise, and how fast they come.
@@ -59,6 +59,14 @@ Config.Upgrades = {
 	Pulse = { Title = "Wider Beacon", Detail = "+40% pulse radius", Icon = "+40%" },
 	Repair = { Title = "Mend the Tower", Detail = "Restore 200 tower health", Icon = "+200" },
 	Pierce = { Title = "Lance of Light", Detail = "Bolts pierce 2 more foes", Icon = "+2" },
+}
+
+Config.EnemyOrder = { "Crawler", "Wisp", "Brute", "Leviathan" }
+Config.EnemyColors = {
+	Crawler = Color3.fromRGB(130, 255, 210),
+	Wisp = Color3.fromRGB(150, 220, 255),
+	Brute = Color3.fromRGB(255, 140, 80),
+	Leviathan = Color3.fromRGB(255, 78, 96),
 }
 
 Config.IntermissionSeconds = 12

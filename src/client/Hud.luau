@@ -69,12 +69,40 @@ local function button(text: string, props: { [string]: any }, onClick: () -> ())
 	return b
 end
 
+local function dot(color: Color3, size: number, parent: Instance, position: UDim2): Frame
+	local d = new("Frame", { BackgroundColor3 = color, BorderSizePixel = 0, Size = UDim2.fromOffset(size, size), Position = position, Parent = parent }) :: Frame
+	corner(size // 2).Parent = d
+	return d
+end
+
+-- The four kinds of Drowned and the five nights, shown under the title so a keeper knows what is coming.
+local function buildBestiary(screen: Frame)
+	label({ Text = "THE DROWNED", Font = FONT, TextSize = 24, TextColor3 = P.Glow, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, -236), Size = UDim2.fromOffset(600, 28), TextStrokeTransparency = 0.5, Parent = screen })
+	local row = new("Frame", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, -202), Size = UDim2.fromOffset(760, 118), BackgroundTransparency = 1, Parent = screen }) :: Frame
+	new("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 14), Parent = row })
+	for _, kind in Config.EnemyOrder do
+		local stats = Config.Enemies[kind]
+		local card = panel({ Size = UDim2.fromOffset(176, 112), Parent = row })
+		card:FindFirstChildOfClass("UIStroke").Color = Config.EnemyColors[kind]
+		dot(Config.EnemyColors[kind], 22, card, UDim2.fromOffset(12, 12))
+		label({ Text = stats.Title, Font = FONT, TextSize = 21, TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(42, 10), Size = UDim2.fromOffset(128, 26), TextScaled = true, Parent = card })
+		label({ Text = stats.Blurb, TextSize = 16, TextColor3 = P.Muted, Position = UDim2.fromOffset(12, 46), Size = UDim2.new(1, -24, 0, 22), Parent = card })
+		label({ Text = string.format("HP %d   SPD %d", stats.Health, stats.Speed), Font = FONT, TextSize = 18, TextColor3 = Config.EnemyColors[kind], Position = UDim2.fromOffset(12, 76), Size = UDim2.new(1, -24, 0, 24), Parent = card })
+	end
+	local nights = {}
+	for i, wave in Config.Waves do
+		table.insert(nights, string.format("%d %s", i, wave.Name))
+	end
+	label({ Text = table.concat(nights, "   ·   "), TextSize = 15, TextColor3 = P.Muted, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, -78), Size = UDim2.fromOffset(900, 20), Parent = screen })
+end
+
 local function buildTitleScreen()
 	local screen = new("Frame", { Name = "Title", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = gui }) :: Frame
 	new("UIGradient", { Rotation = 90, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.55, 0.6), NumberSequenceKeypoint.new(1, 0.05) }), Color = ColorSequence.new(P.Night) , Parent = new("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = P.Night, BorderSizePixel = 0, Parent = screen }) })
 	label({ Text = "LAST LIGHT", Font = FONT, TextSize = 104, TextColor3 = P.Ember, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, -20), Size = UDim2.fromOffset(900, 110), TextStrokeTransparency = 0.4, Parent = screen })
 	label({ Text = "Keep the lighthouse burning through five nights of the Drowned", TextSize = 26, TextColor3 = P.Text, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, 92), Size = UDim2.fromOffset(900, 34), Parent = screen })
 	label({ Text = "CLICK  fire a flare bolt      Q  beacon pulse      WASD  move", TextSize = 20, TextColor3 = P.Muted, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, 132), Size = UDim2.fromOffset(900, 28), Parent = screen })
+	buildBestiary(screen)
 	button("LIGHT THE LAMP", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.5, 178), Size = UDim2.fromOffset(330, 68), Parent = screen }, function()
 		Net.remote("RequestStart"):FireServer()
 	end)
@@ -88,6 +116,69 @@ local function bar(parent: Instance, name: string, color: Color3, position: UDim
 	corner(9).Parent = fill
 	local text = label({ Size = UDim2.fromScale(1, 1), TextSize = 20, Font = FONT, TextStrokeTransparency = 0.5, ZIndex = 3, Parent = back })
 	return fill, text
+end
+
+-- Left: how many of each kind are on the island right now.
+local function buildTideWatch(screen: Frame)
+	local box = panel({ Position = UDim2.fromOffset(14, 120), Size = UDim2.fromOffset(214, 44 + #Config.EnemyOrder * 32), Parent = screen })
+	label({ Text = "TIDE WATCH", Font = FONT, TextSize = 20, TextColor3 = P.Glow, Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(180, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = box })
+	for i, kind in Config.EnemyOrder do
+		local y = 8 + i * 32
+		dot(Config.EnemyColors[kind], 14, box, UDim2.fromOffset(14, y + 7))
+		label({ Text = Config.Enemies[kind].Title, TextSize = 17, Position = UDim2.fromOffset(36, y), Size = UDim2.fromOffset(130, 28), TextXAlignment = Enum.TextXAlignment.Left, Parent = box })
+		local count = label({ Font = FONT, TextSize = 22, TextColor3 = Config.EnemyColors[kind], Position = UDim2.fromOffset(150, y), Size = UDim2.fromOffset(50, 28), TextXAlignment = Enum.TextXAlignment.Right, Parent = box })
+		Net.onState("Alive" .. kind, function(n)
+			count.Text = "x" .. tostring(n or 0)
+			count.TextTransparency = (n or 0) > 0 and 0 or 0.6
+		end)
+	end
+end
+
+-- Under the night banner: the Leviathan's health, only while it lives.
+local function buildBossBar(screen: Frame)
+	local holder = new("Frame", { Name = "Boss", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 116), Size = UDim2.fromOffset(330, 34), BackgroundTransparency = 1, Visible = false, Parent = screen }) :: Frame
+	local fill, text = bar(holder, "BossHealth", P.Danger, UDim2.fromScale(0, 0), UDim2.fromScale(1, 1))
+	stroke(P.Danger, 2).Parent = fill.Parent
+	local function refresh()
+		local health, max = Net.getState("BossHealth") or 0, Net.getState("BossMax") or 0
+		holder.Visible = health > 0 and max > 0
+		if holder.Visible then
+			fill.Size = UDim2.fromScale(health / max, 1)
+			text.Text = string.format("LEVIATHAN  %d / %d", health, max)
+		end
+	end
+	Net.onState("BossHealth", refresh)
+	Net.onState("BossMax", refresh)
+end
+
+-- Right: the blessings this keeper has chosen tonight.
+local blessingsList: Frame
+local function buildBlessings(screen: Frame)
+	local box = panel({ AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 120), Size = UDim2.fromOffset(214, 190), Parent = screen })
+	label({ Text = "BLESSINGS", Font = FONT, TextSize = 20, TextColor3 = P.Ember, Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(180, 26), TextXAlignment = Enum.TextXAlignment.Left, Parent = box })
+	blessingsList = new("Frame", { Position = UDim2.fromOffset(14, 40), Size = UDim2.new(1, -28, 1, -48), BackgroundTransparency = 1, Parent = box }) :: Frame
+	new("UIListLayout", { Padding = UDim.new(0, 4), Parent = blessingsList })
+	label({ Name = "None", Text = "none yet: survive a night", TextSize = 15, TextColor3 = P.Muted, Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, Parent = blessingsList })
+end
+
+function Hud.addBlessing(title: string)
+	local none = blessingsList:FindFirstChild("None")
+	if none then
+		none.Visible = false
+	end
+	label({ Text = "+ " .. title, TextSize = 17, TextColor3 = P.Text, Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, Parent = blessingsList })
+end
+
+local function clearBlessings()
+	for _, child in blessingsList:GetChildren() do
+		if child:IsA("TextLabel") then
+			if child.Name == "None" then
+				child.Visible = true
+			else
+				child:Destroy()
+			end
+		end
+	end
 end
 
 local function buildNightHud()
@@ -122,6 +213,9 @@ local function buildNightHud()
 		embersText.Text = string.format("EMBERS %d", embers or 0)
 	end)
 	Hud.pulseFill, Hud.pulseText = pulseFill, pulseText
+	buildTideWatch(screen)
+	buildBossBar(screen)
+	buildBlessings(screen)
 	screens.Night = screen
 end
 
@@ -153,10 +247,11 @@ end
 
 local function buildEndScreen()
 	local screen = new("Frame", { Name = "End", Size = UDim2.fromScale(1, 1), BackgroundColor3 = P.Night, BackgroundTransparency = 0.35, BorderSizePixel = 0, Visible = false, Parent = gui }) :: Frame
-	local box = panel({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(620, 400), Parent = screen })
+	local box = panel({ AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(640, 440), Parent = screen })
 	local headline = label({ Name = "Headline", Font = FONT, TextSize = 72, Position = UDim2.fromOffset(0, 24), Size = UDim2.new(1, 0, 0, 80), Parent = box })
 	local subline = label({ Name = "Subline", TextSize = 24, TextColor3 = P.Text, Position = UDim2.fromOffset(0, 106), Size = UDim2.new(1, 0, 0, 30), Parent = box })
 	local stats = label({ Name = "Stats", Font = FONT, TextSize = 28, TextColor3 = P.Text, Position = UDim2.fromOffset(40, 152), Size = UDim2.new(1, -80, 0, 120), TextYAlignment = Enum.TextYAlignment.Top, Parent = box })
+	local breakdown = label({ Name = "Breakdown", TextSize = 17, TextColor3 = P.Glow, Position = UDim2.fromOffset(20, 282), Size = UDim2.new(1, -40, 0, 24), Parent = box })
 	button("KEEP ANOTHER NIGHT", { AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -28), Size = UDim2.fromOffset(380, 66), Parent = box }, function()
 		Net.remote("RequestStart"):FireServer()
 	end)
@@ -165,9 +260,14 @@ local function buildEndScreen()
 		headline.TextColor3 = won and P.Ember or P.Danger
 		subline.Text = won and "The Leviathan sinks. The lighthouse stands." or "The Drowned took the tower."
 		local seconds = (Net.getState("EndedAt") or 0) - (Net.getState("StartedAt") or 0)
+		local byKind = {}
+		for _, kind in Config.EnemyOrder do
+			table.insert(byKind, string.format("%s %d", Config.Enemies[kind].Title, Net.getState("Banished" .. kind) or 0))
+		end
 		stats.Text = string.format("Nights kept   %d / %d\nDrowned banished   %d\nEmbers   %d     Time   %d:%02d",
 			won and #Config.Waves or math.max((Net.getState("Wave") or 1) - 1, 0), #Config.Waves,
 			Net.getState("Banished") or 0, Net.getState("Embers") or 0, seconds // 60, seconds % 60)
+		breakdown.Text = table.concat(byKind, "  ·  ")
 	end
 	screens.End = screen
 end
@@ -207,6 +307,11 @@ function Hud.build()
 	buildEndScreen()
 	Net.onState("Phase", function(phase)
 		Hud.showPhase(phase or "Lobby")
+	end)
+	Net.onState("Wave", function(wave)
+		if (wave or 0) <= 1 then
+			clearBlessings()
+		end
 	end)
 	return gui
 end

@@ -40,6 +40,16 @@ local function resetNight()
 	Net.setState("Remaining", 0)
 	Net.setState("StartedAt", os.time())
 	Net.setState("Offer", "")
+	Net.setState("BossHealth", 0)
+	Net.setState("BossMax", 0)
+	for _, kind in Config.EnemyOrder do
+		Net.setState("Alive" .. kind, 0)
+		Net.setState("Banished" .. kind, 0)
+	end
+end
+
+local function bumpState(key: string, delta: number)
+	Net.setState(key, math.max((Net.getState(key) or 0) + delta, 0))
 end
 
 local function respawnKeepers()
@@ -53,8 +63,12 @@ end
 
 local function endNight(won: boolean)
 	Net.setState("EndedAt", os.time())
-	setPhase(won and "Victory" or "Defeat")
 	Enemies.clear()
+	for _, kind in Config.EnemyOrder do
+		Net.setState("Alive" .. kind, 0)
+	end
+	Net.setState("BossHealth", 0)
+	setPhase(won and "Victory" or "Defeat")
 	feedback:FireAllClients(won and "Victory" or "Defeat")
 end
 
@@ -160,10 +174,21 @@ function Waves.onTowerHit(damage: number)
 	end
 end
 
+function Waves.onSpawned(kind: string)
+	bumpState("Alive" .. kind, 1)
+end
+
+function Waves.onBossHealth(health: number, maxHealth: number)
+	Net.setState("BossHealth", math.ceil(health))
+	Net.setState("BossMax", maxHealth)
+end
+
 function Waves.onBanished(kind: string, reward: number, _killer: Player?)
-	Net.setState("Embers", (Net.getState("Embers") or 0) + reward)
-	Net.setState("Banished", (Net.getState("Banished") or 0) + 1)
-	Net.setState("Remaining", math.max((Net.getState("Remaining") or 1) - 1, 0))
+	bumpState("Embers", reward)
+	bumpState("Banished", 1)
+	bumpState("Remaining", -1)
+	bumpState("Alive" .. kind, -1)
+	bumpState("Banished" .. kind, 1)
 	if Config.Enemies[kind].Boss then
 		feedback:FireAllClients("BossBanished")
 	end

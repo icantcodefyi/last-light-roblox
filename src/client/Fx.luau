@@ -119,6 +119,7 @@ local function onFeedback(kind: string, a: any, b: any, c: any)
 		hud.banner("+" .. tostring(a) .. " TOWER MENDED", P.Heal)
 	elseif kind == "Upgraded" then
 		hud.banner(tostring(a), P.Glow)
+		hud.addBlessing(tostring(a))
 	end
 end
 
